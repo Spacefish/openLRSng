@@ -76,6 +76,21 @@
 #define EEPROM_FAILSAFE_OFFSET 0x180
 
 
+// EEPROM layout
+// RX:
+//   0x100-0x1xx (bind struct)
+//   0x140-0x1xx (rxconf struct)
+//   0x180-0x1xx (bind)
+//   0x300/340/380 redundant copy
+//
+// TX:
+//   0x040 active profile no.
+//   0x100 prof1
+//   0x140 prof2
+//   0x180 prof3
+//   0x1c0 prof4
+//   (+0x200) redundant copy
+
 #define TELEMETRY_PACKETSIZE 9
 
 #define BIND_MAGIC (0xDEC1BE15 + BINDING_VERSION)
@@ -134,16 +149,28 @@ void fatalBlink(uint8_t blinks);
 
 #include <avr/eeprom.h>
 
+void eepromWriteByteRedundant(uint16_t addr, uint8_t data) {
+  eeprom_write_byte(addr, data);
+  eeprom_write_byte(0x200 + addr, data);
+}
+
 // Save EEPROM by writing just changed data
-void myEEPROMwrite(int16_t addr, uint8_t data)
+void myEEPROMwrite(uint32_t magic, uint8_t *data, uint16_t addr, uint8_t size)
 {
-  uint8_t retries = 5;
-  while ((--retries) && (data != eeprom_read_byte((uint8_t *)addr))) {
-    eeprom_write_byte((uint8_t *)addr, data);
+  uint8_t i,val;
+  CRC16_reset();
+  for (i = 0; i < 4; i++) {
+    val = (magic >> ((3 - i) * 8)) & 0xff;
+    eepromWriteByteRedundant(addr++, val);
+    CRC16_add(val);
   }
-  if (!retries) {
-    fatalBlink(2);
+  for (i=0; i < size; i++) {
+    val = data[i];
+    eepromWriteByteRedundant(addr++, val);
+    CRC16_add(val);
   }
+  eepromWriteByteRedundant(addr++, CRC16_value>>8);
+  eepromWriteByteRedundant(addr++, CRC16_value & 0x0ff);
 }
 
 #ifdef COMPILE_TX
