@@ -316,6 +316,8 @@ void setup(void)
 {
   uint32_t start;
 
+  delay(200);
+
   watchdogConfig(WATCHDOG_OFF);
 
   setupSPI();

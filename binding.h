@@ -1,5 +1,4 @@
 // OpenLRSng binding
-
 // Factory setting values, modify via the CLI
 
 //####### RADIOLINK RF POWER (beacon is always 100/13/1.3mW) #######
@@ -113,6 +112,23 @@ struct bind_data {
   uint8_t flags;
 } bind_data;
 
+struct RX_config {
+  uint8_t  rx_type; // RX type fillled in by RX, do not change
+  uint8_t  pinMapping[13];
+  uint8_t  flags;
+  uint8_t  RSSIpwm;
+  uint32_t beacon_frequency;
+  uint8_t  beacon_deadtime;
+  uint8_t  beacon_interval;
+  uint16_t minsync;
+  uint8_t  failsafeDelay;
+  uint8_t  ppmStopDelay;
+  uint8_t  pwmStopDelay;
+};
+
+struct RX_config rx_config;
+
+
 struct rfm22_modem_regs {
   uint32_t bps;
   uint8_t  r_1c, r_1d, r_1e, r_20, r_21, r_22, r_23, r_24, r_25, r_2a, r_6e, r_6f, r_70, r_71, r_72;
@@ -132,8 +148,14 @@ struct rfm22_modem_regs bind_params =
 // prototype
 void fatalBlink(uint8_t blinks);
 
+#include "fixed_config.h"
+#ifdef FIXED_CONFIG_NO_EEPROM
+static uint8_t fixed_hop_list[] = {FIXED_HOPLIST};
+#endif
 #include <avr/eeprom.h>
 
+
+#ifndef FIXED_CONFIG_NO_EEPROM
 // Save EEPROM by writing just changed data
 void myEEPROMwrite(int16_t addr, uint8_t data)
 {
@@ -145,6 +167,7 @@ void myEEPROMwrite(int16_t addr, uint8_t data)
     fatalBlink(2);
   }
 }
+#endif
 
 #ifdef COMPILE_TX
 #define TX_PROFILE_COUNT 4
@@ -152,30 +175,39 @@ uint8_t activeProfile = 0;
 
 void profileSet()
 {
+  #ifndef FIXED_CONFIG_NO_EEPROM
   myEEPROMwrite(EEPROM_PROFILE_OFFSET, activeProfile);
+  #endif
 }
 
 void  profileInit()
 {
+  #ifndef FIXED_CONFIG_NO_EEPROM
   activeProfile = eeprom_read_byte((uint8_t *)EEPROM_PROFILE_OFFSET);
   if (activeProfile >= TX_PROFILE_COUNT) {
     activeProfile = 0;
     profileSet();
   }
+  #else
+  activeProfile = 0;
+  #endif
 }
 
 void profileSwap(uint8_t profile)
 {
+  #ifndef FIXED_CONFIG_NO_EEPROM
   profileInit();
   if ((activeProfile != profile) && (profile < TX_PROFILE_COUNT)) {
     activeProfile = profile;
     profileSet();
   }
+  #endif
 }
 #endif
 
 int16_t bindReadEeprom()
 {
+  #ifndef FIXED_CONFIG_NO_EEPROM
   uint32_t temp = 0;
   for (uint8_t i = 0; i < 4; i++) {
     temp = (temp << 8) + eeprom_read_byte((uint8_t *)(EEPROM_OFFSET(activeProfile) + i));
@@ -193,10 +225,28 @@ int16_t bindReadEeprom()
   }
 
   return 1;
+  #else
+  bind_data.version = BINDING_VERSION;
+  bind_data.serial_baudrate = FIXED_BAUDRATE;
+  bind_data.rf_power = FIXED_RF_POWER;
+  bind_data.rf_frequency = FIXED_CARRIER_FREQUENCY;
+  bind_data.rf_channel_spacing = FIXED_CHANNEL_SPACING;
+
+  bind_data.rf_magic = FIXED_RF_MAGIC;
+
+  for (uint8_t c = 0; c < MAXHOPS; c++) {
+    bind_data.hopchannel[c] = (c < sizeof(fixed_hop_list)) ? fixed_hop_list[c] : 0;
+  }
+
+  bind_data.modem_params = FIXED_DATARATE;
+  bind_data.flags = DEFAULT_FLAGS;
+  return 1;
+  #endif
 }
 
 void bindWriteEeprom(void)
 {
+  #ifndef FIXED_CONFIG_NO_EEPROM
   for (uint8_t i = 0; i < 4; i++) {
     myEEPROMwrite(EEPROM_OFFSET(activeProfile) + i, (BIND_MAGIC >> ((3 - i) * 8)) & 0xff);
   }
@@ -204,6 +254,7 @@ void bindWriteEeprom(void)
   for (uint8_t i = 0; i < sizeof(bind_data); i++) {
     myEEPROMwrite(EEPROM_OFFSET(activeProfile) + 4 + i, *((uint8_t*)&bind_data + i));
   }
+  #endif
 }
 
 void bindInitDefaults(void)
@@ -289,19 +340,7 @@ uint32_t delayInMsLong(uint8_t d)
   return delayInMs((uint16_t)d + 100);
 }
 
-struct RX_config {
-  uint8_t  rx_type; // RX type fillled in by RX, do not change
-  uint8_t  pinMapping[13];
-  uint8_t  flags;
-  uint8_t  RSSIpwm;
-  uint32_t beacon_frequency;
-  uint8_t  beacon_deadtime;
-  uint8_t  beacon_interval;
-  uint16_t minsync;
-  uint8_t  failsafeDelay;
-  uint8_t  ppmStopDelay;
-  uint8_t  pwmStopDelay;
-} rx_config;
+
 
 #ifndef COMPILE_TX
 // following is only needed on receiver
@@ -352,14 +391,17 @@ void rxInitDefaults(bool save)
   rx_config.beacon_deadtime = DEFAULT_BEACON_DEADTIME;
   rx_config.beacon_interval = DEFAULT_BEACON_INTERVAL;
   rx_config.minsync = 3000;
-
+  
+  #ifndef FIXED_CONFIG_NO_EEPROM
   if (save) {
     rxWriteEeprom();
   }
+  #endif
 }
 
 void rxReadEeprom()
 {
+  #ifndef FIXED_CONFIG_NO_EEPROM
   uint32_t temp = 0;
 
   for (uint8_t i = 0; i < 4; i++) {
@@ -372,6 +414,7 @@ void rxReadEeprom()
     for (uint8_t i = 0; i < sizeof(rx_config); i++) {
       *((uint8_t*)&rx_config + i) = eeprom_read_byte((uint8_t *)(EEPROM_RX_OFFSET + 4 + i));
     }
+    #endif
 #if (BOARD_TYPE == 3)
     if (rx_config.rx_type != RX_FLYTRON8CH) {
       rxInitDefaults(1);
@@ -380,11 +423,14 @@ void rxReadEeprom()
     if (rx_config.rx_type != RX_OLRSNG4CH) {
       rxInitDefaults(1);
     }
-#else
 #error FIXME
 #endif
     Serial.println("RXconf loaded");
   }
+  #ifdef FIXED_CONFIG_NO_EEPROM
+  rx_config = fixed_RXConfig;
+  Serial.println("RXConf loaded from Fixed Config");
+  #endif
 }
 
 #endif
