@@ -113,6 +113,10 @@ struct bind_data {
   uint8_t flags;
 } bind_data;
 
+#ifdef FIXED_BIND_CONFIG
+#include "fixed_bindconfig.h"
+#endif
+
 struct rfm22_modem_regs {
   uint32_t bps;
   uint8_t  r_1c, r_1d, r_1e, r_20, r_21, r_22, r_23, r_24, r_25, r_2a, r_6e, r_6f, r_70, r_71, r_72;
