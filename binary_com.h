@@ -293,6 +293,7 @@ void PSP_process_data(uint8_t code, uint16_t payload_length_received, uint8_t da
       PSP_serialize_uint8(0x00); // fail
     }
     break;
+  #ifndef FIXED_BIND_CONFIG
   case PSP_SET_ACTIVE_PROFILE:
     PSP_protocol_head(PSP_SET_ACTIVE_PROFILE, 1);
 
@@ -303,6 +304,7 @@ void PSP_process_data(uint8_t code, uint16_t payload_length_received, uint8_t da
     }
     PSP_serialize_uint8(0x01); // done
     break;
+  #endif
   case PSP_SET_RX_FAILSAFE:
     PSP_protocol_head(PSP_SET_RX_FAILSAFE, 1);
     {

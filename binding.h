@@ -154,6 +154,7 @@ void myEEPROMwrite(int16_t addr, uint8_t data)
 #define TX_PROFILE_COUNT 4
 uint8_t activeProfile = 0;
 
+#ifndef FIXED_BIND_CONFIG
 void profileSet()
 {
   myEEPROMwrite(EEPROM_PROFILE_OFFSET, activeProfile);
@@ -256,6 +257,7 @@ again:
     bind_data.hopchannel[c] = ch;
   }
 }
+#endif // end FIXED_BIND_CONFIG
 
 #define PPM_MAX_8CH       0x01
 #define ALWAYS_BIND       0x02

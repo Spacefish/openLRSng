@@ -45,7 +45,6 @@
 //####### COMPILATION TARGET #######
 // Enable to compile transmitter code, default is RX (remove leading //)
 #define COMPILE_TX
-#define FIXED_BIND_CONFIG
 
 //####### TX BOARD TYPE #######
 // Enable one of the lines below (remove leading //)
@@ -64,6 +63,7 @@
 //### Enabled Features (some features can be enabled / disabled with compile flag)
 #define CLI // Command-line interface
 #define CONFIGURATOR // Phoenix Serial Protocol (required for Configurator to work)
+#define FIXED_BIND_CONFIG // use a fixed bindconfig (for example if you have problems with EEPROM corruption) configure in fixed_bindconfig.h
 
 //### DEBUG flags, may be dangerous
 //#define TEST_NO_ACK_BY_CH1 // disable sending of acks from RX by channel 1

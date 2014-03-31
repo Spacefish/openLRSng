@@ -234,6 +234,7 @@ void checkButton(void)
       }
 
       buzzerOff();
+      #ifndef FIXED_BIND_CONFIG
       if (swapProfile) {
         profileSwap((activeProfile + 1) % TX_PROFILE_COUNT);
         Serial.print("New profile:");
@@ -250,6 +251,7 @@ void checkButton(void)
       bindRandomize();
       bindWriteEeprom();
       bindPrint();
+      #endif
     }
 just_bind:
     // Enter binding mode, automatically after recoding or when pressed for shorter time.
@@ -340,6 +342,7 @@ void setup(void)
   buzzerInit();
 
   Serial.begin(115200);
+  #ifndef FIXED_BIND_CONFIG
   profileInit();
   if (bindReadEeprom()) {
     Serial.println("Loaded settings from EEPROM\n");
@@ -348,6 +351,9 @@ void setup(void)
     bindInitDefaults();
     bindWriteEeprom();
   }
+  #else
+  Serial.println("Using fixed bindconfig\n");
+  #endif
 
   setupPPMinput();
   ppmAge = 255;
