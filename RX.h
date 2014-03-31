@@ -618,7 +618,7 @@ void setup()
       }
     }
   }
-  #eöse
+  #else
   setupOutputs();
   Serial.println("Using fixed bindconfig\n");
   Green_LED_ON;
